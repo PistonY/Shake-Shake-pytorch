@@ -10,6 +10,8 @@ from torch.autograd import Variable
 from collections import OrderedDict
 import numpy as np
 
+__all__ = ['summary']
+
 
 def summary(model, input_size, batch_size=-1, device="cuda"):
     def register_hook(module):

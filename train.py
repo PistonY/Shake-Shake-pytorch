@@ -7,20 +7,15 @@ import time
 import numpy as np
 from torch import nn, optim
 from torch.autograd import Variable
-
-from torchmetric.metric import Accuracy
 from torch.utils.data import DataLoader
-from PIL import Image
+
 from torchvision.transforms import transforms
 from torchvision.datasets import CIFAR10
+
+from torchmetric.metric import Accuracy, Loss as mloss
+from PIL import Image
 from model.ss_resnet import ShakeResNet
-from utils.cutout import Cutout
-
-
-def _read_files(path):
-    img = Image.open(path)
-    return img
-
+from utils import Cutout, mixup_data, mixup_criterion, IterLRScheduler
 
 cutout = Cutout()
 normalizer = transforms.Normalize(mean=[0.4914, 0.4824, 0.4467],
@@ -78,36 +73,43 @@ def test():
 epochs = 100
 lr = 0.1
 num_train_samples = 50000
+mixup = True
+alpha = 1.0 if mixup else 0.0
+num_iterations = len(train_data) * epochs
+lr_warmup_iters = len(train_data) * 5
+
+lr_scheduler = IterLRScheduler(mode='cosine', baselr=lr, niters=num_iterations, warmup_iters=lr_warmup_iters)
 
 
 def train():
-    global lr
     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, nesterov=True, weight_decay=0.0001)
     Loss = nn.CrossEntropyLoss()
-    metric_acc = Accuracy()
+    metric_loss = mloss()
+    iterations = 0
     for epoch in range(epochs):
         model.train()
-        metric_acc.reset()
+        metric_loss.reset()
         st_time = time.time()
         for i, (trans, labels) in enumerate(train_data):
-            trans = Variable(trans.cuda())
-            labels = Variable(labels.cuda()).long()
+            trans, targets_a, targets_b, lam = mixup_data(trans.cuda(), labels.cuda(), alpha=alpha)
+            trans, targets_a, targets_b = map(Variable, (trans, targets_a, targets_b))
+
+            # trans = Variable(trans.cuda())
+            # labels = Variable(labels.cuda()).long()
             optimizer.zero_grad()
             outputs = model(trans)
-            metric_acc.update(labels, outputs)
-            loss = Loss(outputs, labels)
+
+            loss = mixup_criterion(Loss, outputs, targets_a, targets_b, lam)
             loss.backward()
             optimizer.step()
-        met_name, acc = metric_acc.get()
+            metric_loss.update(loss)
+            iterations += 1
+            lr_scheduler.update(optimizer, iterations)
+        learning_rate = lr_scheduler.get()
+        met_name, metric = metric_loss.get()
         epoch_time = time.time() - st_time
-        epoch_str = 'Train {}: {:.5f}. {} samples/s.'.format(met_name, acc, int(num_train_samples // epoch_time))
+        epoch_str = 'Train {}: {:.5f}. {} samples/s. lr {:.5}'.format(met_name, metric, int(num_train_samples // epoch_time), learning_rate)
         print(epoch_str)
-        if epoch in [int(e * epochs) for e in (0.3, 0.6, 0.9)]:
-            lr /= 10
-            print('reset learning rate to:', lr)
-            for param_group in optimizer.param_groups:
-                param_group['lr'] = lr
-                print(param_group['lr'])
         test()
         # torch.save(model.state_dict(), '{}/{}.pkl'.format('param', epoch))
 

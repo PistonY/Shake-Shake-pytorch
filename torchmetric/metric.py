@@ -4,8 +4,9 @@
 # Date  : 3/27/19
 
 import torch
+import numpy as np
 
-__all__ = ['Accuracy']
+__all__ = ['Accuracy', 'Loss']
 
 
 class Accuracy(object):
@@ -27,3 +28,21 @@ class Accuracy(object):
 
     def get(self):
         return self.name, self.num_metric / self.num_inst
+
+
+class Loss(object):
+    def __init__(self, name='loss'):
+        self.sum_loss = 0
+        self.sum_num = 0
+        self.name = name
+
+    def reset(self):
+        self.sum_loss = 0
+        self.sum_num = 0
+
+    def update(self, loss):
+        self.sum_num += loss.cpu().view(-1).detach().numpy().sum()
+        self.sum_num += 1
+
+    def get(self):
+        return self.name, self.sum_loss / self.sum_num

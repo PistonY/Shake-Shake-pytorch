@@ -16,9 +16,10 @@ from torchvision.datasets import CIFAR10
 from torchmetric.metric import Accuracy, Loss as mloss
 from PIL import Image
 from model.ss_resnet import ShakeResNet
-from utils import Cutout, mixup_data, mixup_criterion, IterLRScheduler
+from utils import Cutout, mixup_data, mixup_criterion, IterLRScheduler, split_weights
 
-cutout = Cutout()
+use_cutout = True
+cutout = Cutout() if use_cutout else None
 normalizer = transforms.Normalize(mean=[0.4914, 0.4824, 0.4467],
                                   std=[0.2471, 0.2435, 0.2616])
 
@@ -26,7 +27,9 @@ normalizer = transforms.Normalize(mean=[0.4914, 0.4824, 0.4467],
 def transformer(im):
     im = np.array(im)
     im = np.pad(im, pad_width=((4, 4), (4, 4), (0, 0)), mode='constant')
-    im = Image.fromarray(cutout(im))
+    if use_cutout:
+        im = cutout(im)
+    im = Image.fromarray(im)
     auglist = transforms.Compose([
         transforms.RandomCrop(32),
         transforms.RandomHorizontalFlip(),
@@ -58,24 +61,26 @@ num_classes = 10
 model = ShakeResNet(26, 64, num_classes).cuda()
 
 
-def test():
+def test(epoch=0, save_stat=True):
     model.eval()
     acc_metric = Accuracy()
     with torch.no_grad():
         for images, labels in val_data:
-            images = Variable(images.cuda())
-            labels = Variable(labels.cuda()).long()
+            images = images.cuda()
+            labels = labels.cuda().long()
             output = model(images)
             acc_metric.update(labels, output)
     met_name, acc = acc_metric.get()
-    test_str = 'Test {}: {:.5f}'.format(met_name, acc)
+    test_str = 'Epoch {}. Test {}: {:.5f}'.format(epoch, met_name, acc)
     print(test_str)
+    if save_stat:
+        torch.save(model.state_dict(), '{}/epoch_{}_{:.5}.pkl'.format('param', epoch, acc))
 
 
 epochs = 220
 base_lr = 0.1 * (batch_size // 64)
 num_train_samples = 50000
-mixup = False
+mixup = True
 
 num_iterations = len(train_data) * epochs
 lr_warmup_iters = len(train_data) * 5
@@ -84,7 +89,8 @@ lr_scheduler = IterLRScheduler(mode='cosine', baselr=base_lr, niters=num_iterati
 
 
 def train():
-    optimizer = optim.SGD(model.parameters(), lr=base_lr, momentum=0.9, nesterov=True, weight_decay=0.0001)
+    params = split_weights(model)
+    optimizer = optim.SGD(params, lr=base_lr, momentum=0.9, nesterov=True, weight_decay=0.0001)
     Loss = nn.CrossEntropyLoss()
     metric_loss = mloss()
     alpha = 1. if mixup else 0.
@@ -111,10 +117,10 @@ def train():
         learning_rate = lr_scheduler.get()
         met_name, metric = metric_loss.get()
         epoch_time = time.time() - st_time
-        epoch_str = 'Train {}: {:.5f}. {} samples/s. lr {:.5}'.format(met_name, metric, int(num_train_samples // epoch_time), learning_rate)
+        epoch_str = 'Epoch {}. Train {}: {:.5f}. {} samples/s. lr {:.5}'. \
+            format(epoch, met_name, metric, int(num_train_samples // epoch_time), learning_rate)
         print(epoch_str)
-        test()
-        # torch.save(model.state_dict(), '{}/{}.pkl'.format('param', epoch))
+        test(epoch, False)
 
 
 if __name__ == '__main__':

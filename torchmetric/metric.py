@@ -41,7 +41,7 @@ class Loss(object):
         self.sum_num = 0
 
     def update(self, loss):
-        self.sum_num += loss.cpu().view(-1).detach().numpy().sum()
+        self.sum_loss += loss.cpu().detach().numpy()
         self.sum_num += 1
 
     def get(self):

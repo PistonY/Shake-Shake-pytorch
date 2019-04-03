@@ -10,7 +10,6 @@ import torch.nn.functional as F
 
 from .shakeshake import ShakeShake
 
-# from .shakeshake import Shortcut
 __all__ = ['ShakeBlock', 'ShakeResNet']
 
 

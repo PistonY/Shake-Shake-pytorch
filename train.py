@@ -148,7 +148,7 @@ def train():
         epoch_str = 'Epoch {}. Train {}: {:.5f}. {} samples/s. lr {:.5}'. \
             format(epoch, met_name, metric, int(num_train_samples // epoch_time), learning_rate)
         logger.info(epoch_str)
-        test(epoch, False)
+        test(epoch, True)
 
 
 if __name__ == '__main__':

@@ -14,40 +14,6 @@ from .shakeshake import ShakeShake
 __all__ = ['ShakeBlock', 'ShakeResNet']
 
 
-class basic_shake_block(nn.Module):
-    def __init__(self, in_ch, out_ch, stride=1):
-        super().__init__()
-        self.equal_io = True if in_ch == out_ch and stride == 1 else False
-        self.shortcut = None if self.equal_io else self._make_shortcut(in_ch, out_ch, stride)
-
-        self.branch1 = self._make_branch(in_ch, out_ch, stride)
-        self.branch2 = self._make_branch(in_ch, out_ch, stride)
-
-    def forward(self, x):
-        h1 = self.branch1(x)
-        h2 = self.branch2(x)
-        h = ShakeShake.apply(h1, h2, self.training)
-        h0 = x if self.equal_io else self.shortcut(x)
-        return h + h0
-
-    def _make_shortcut(self, in_ch, out_ch, stride):
-        return nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, kernel_size=1, stride=stride, bias=False),
-            nn.BatchNorm2d(out_ch))
-
-    def _make_branch(self, in_ch, out_ch, stride=1):
-        return nn.Sequential(
-            nn.ReLU(False),
-            nn.Conv2d(in_ch, out_ch // 4, 1, bias=False),
-            nn.BatchNorm2d(out_ch // 4),
-            nn.ReLU(False),
-            nn.Conv2d(out_ch // 4, out_ch // 4, 3, padding=1, stride=stride, bias=False),
-            nn.BatchNorm2d(out_ch // 4),
-            nn.ReLU(False),
-            nn.Conv2d(out_ch // 4, out_ch, 1, bias=False),
-            nn.BatchNorm2d(out_ch))
-
-
 class ShakeBlock(nn.Module):
     def __init__(self, in_ch, out_ch, stride=1):
         super(ShakeBlock, self).__init__()

@@ -1,4 +1,6 @@
 ## Shake-Shake pytorch
+This is a unofficial Shake-Shake regularization implement of pytorch
+with Python3.
 
 ### Usage
 For train a model, please just use train [scripts](./scripts)

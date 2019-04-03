@@ -4,9 +4,10 @@
 # Date  : 3/27/19
 import os
 import time
-import numpy as np
 import torch
 import argparse
+import logging
+import numpy as np
 from torch import nn, optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
@@ -23,13 +24,25 @@ parser = argparse.ArgumentParser(description="Train a shake-shake model.")
 parser.add_argument('--cutout', action='store_true')
 parser.add_argument('--epochs', type=int, default=220)
 parser.add_argument('--batch-size', type=int, default=64)
-parser.add_argument('--depth', type=int, default=64)
+parser.add_argument('--depth', type=int, default=26)
 parser.add_argument('--width', type=int, default=64)
 parser.add_argument('--mixup', action='store_true')
-# parser.add_argument('--learning-rate', type=float, default=0.1)
+parser.add_argument('--no-wd', action='store_true')
 opt = parser.parse_args()
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
+logging_file = 'ShakeShake_SSI_%s_2x%s.log' % (opt.depth, opt.width)
+filehandler = logging.FileHandler(logging_file)
+streamhandler = logging.StreamHandler()
+
+logger = logging.getLogger('')
+logger.setLevel(logging.INFO)
+logger.addHandler(filehandler)
+logger.addHandler(streamhandler)
+
+logger.info(opt)
+
 use_cutout = opt.cutout
 cutout = Cutout() if use_cutout else None
 normalizer = transforms.Normalize(mean=[0.4914, 0.4824, 0.4467],
@@ -84,9 +97,10 @@ def test(epoch=0, save_stat=True):
             acc_metric.update(labels, output)
     met_name, acc = acc_metric.get()
     test_str = 'Epoch {}. Test {}: {:.5f}'.format(epoch, met_name, acc)
-    print(test_str)
+    logger.info(test_str)
     if save_stat:
-        torch.save(model.state_dict(), '{}/epoch_{}_{:.5}.pkl'.format('param', epoch, acc))
+        torch.save(model.state_dict(),
+                   '{}/{}_2x{}_epoch_{}_{:.5}.pkl'.format('param', opt.depth, opt.width, epoch, acc))
 
 
 epochs = opt.epochs
@@ -97,12 +111,14 @@ mixup = opt.mixup
 num_iterations = len(train_data) * epochs
 lr_warmup_iters = len(train_data) * 5
 
+
 lr_scheduler = IterLRScheduler(mode='cosine', baselr=base_lr, niters=num_iterations, warmup_iters=lr_warmup_iters)
 
 
 def train():
-    params = split_weights(model)
+    params = split_weights(model) if opt.no_wd else model.parameters()
     optimizer = optim.SGD(params, lr=base_lr, momentum=0.9, nesterov=True, weight_decay=0.0001)
+
     Loss = nn.CrossEntropyLoss()
     metric_loss = mloss()
     alpha = 1. if mixup else 0.
@@ -116,8 +132,7 @@ def train():
         for i, (trans, labels) in enumerate(train_data):
             trans, targets_a, targets_b, lam = mixup_data(trans.cuda(), labels.cuda(), alpha=alpha)
             trans, targets_a, targets_b = map(Variable, (trans, targets_a, targets_b))
-            # trans = Variable(trans.cuda())
-            # labels = Variable(labels.cuda()).long()
+
             outputs = model(trans)
             loss = mixup_criterion(Loss, outputs, targets_a, targets_b, lam)
             loss.backward()
@@ -132,7 +147,7 @@ def train():
         epoch_time = time.time() - st_time
         epoch_str = 'Epoch {}. Train {}: {:.5f}. {} samples/s. lr {:.5}'. \
             format(epoch, met_name, metric, int(num_train_samples // epoch_time), learning_rate)
-        print(epoch_str)
+        logger.info(epoch_str)
         test(epoch, False)
 
 

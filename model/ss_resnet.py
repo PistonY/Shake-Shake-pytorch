@@ -11,7 +11,6 @@ import torch.nn.functional as F
 from .shakeshake import ShakeShake
 
 # from .shakeshake import Shortcut
-
 __all__ = ['ShakeBlock', 'ShakeResNet']
 
 
@@ -125,6 +124,6 @@ class ShakeResNet(nn.Module):
     def _make_layer(self, n_units, in_ch, out_ch, stride=1):
         layers = []
         for i in range(int(n_units)):
-            layers.append(basic_shake_block(in_ch, out_ch, stride=stride))
+            layers.append(ShakeBlock(in_ch, out_ch, stride=stride))
             in_ch, stride = out_ch, 1
         return nn.Sequential(*layers)

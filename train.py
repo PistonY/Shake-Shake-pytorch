@@ -2,10 +2,11 @@
 # Author: X.Yang
 # Concat: pistonyang@gmail.com
 # Date  : 3/27/19
-
+import os
 import time
 import numpy as np
 import torch
+import argparse
 from torch import nn, optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
@@ -18,7 +19,18 @@ from PIL import Image
 from model.ss_resnet import ShakeResNet
 from utils import Cutout, mixup_data, mixup_criterion, IterLRScheduler, split_weights
 
-use_cutout = True
+parser = argparse.ArgumentParser(description="Train a shake-shake model.")
+parser.add_argument('--cutout', action='store_true')
+parser.add_argument('--epochs', type=int, default=220)
+parser.add_argument('--batch-size', type=int, default=64)
+parser.add_argument('--depth', type=int, default=64)
+parser.add_argument('--width', type=int, default=64)
+parser.add_argument('--mixup', action='store_true')
+# parser.add_argument('--learning-rate', type=float, default=0.1)
+opt = parser.parse_args()
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+use_cutout = opt.cutout
 cutout = Cutout() if use_cutout else None
 normalizer = transforms.Normalize(mean=[0.4914, 0.4824, 0.4467],
                                   std=[0.2471, 0.2435, 0.2616])
@@ -49,7 +61,7 @@ def trans_test(im):
     return im
 
 
-batch_size = 256
+batch_size = opt.batch_size
 train_data = DataLoader(
     CIFAR10('/media/piston/data/pytorch/dataset/', transform=transformer, train=True),
     batch_size, shuffle=True, num_workers=4, drop_last=True)
@@ -58,7 +70,7 @@ val_data = DataLoader(
     batch_size, num_workers=4)
 
 num_classes = 10
-model = ShakeResNet(26, 64, num_classes).cuda()
+model = ShakeResNet(opt.depth, opt.width, num_classes).cuda()
 
 
 def test(epoch=0, save_stat=True):
@@ -77,10 +89,10 @@ def test(epoch=0, save_stat=True):
         torch.save(model.state_dict(), '{}/epoch_{}_{:.5}.pkl'.format('param', epoch, acc))
 
 
-epochs = 220
+epochs = opt.epochs
 base_lr = 0.1 * (batch_size // 64)
 num_train_samples = 50000
-mixup = True
+mixup = opt.mixup
 
 num_iterations = len(train_data) * epochs
 lr_warmup_iters = len(train_data) * 5
@@ -111,6 +123,7 @@ def train():
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
+
             metric_loss.update(loss)
             iterations += 1
             lr_scheduler.update(optimizer, iterations)

@@ -13,7 +13,7 @@ lettle more.
 
 Model        | Proposed | This repo|
 -------      |:--------:|:--------:|
-SSI 26 2x32d |3.55	    |n\a	   |
-SSI 26 2x64d |2.98	    |n\a	   |
-SSI 26 2x96d |2.86	    |n\a	   |
-SSI 26 2x112d|2.82	    |n\a	   |
+SSI 26 2x32d |3.55	    |Training  |
+SSI 26 2x64d |2.98	    |Training  |
+SSI 26 2x96d |2.86	    |Training  |
+SSI 26 2x112d|2.82	    |Training  |

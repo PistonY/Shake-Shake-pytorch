@@ -2,6 +2,7 @@
 This is a unofficial Shake-Shake regularization implement of pytorch
 with Python3.
 
+And boost much better than proposed using less time.
 ### Usage
 For train a model, please just use train [scripts](./scripts)
 
@@ -13,7 +14,8 @@ lettle more.
 
 Model        | Proposed | This repo|
 -------      |:--------:|:--------:|
-SSI 26 2x32d |3.55	    |Training  |
-SSI 26 2x64d |2.98	    |Training  |
+epochs       |1800      |220       |
+SSI 26 2x32d |**3.55**  |3.91      |
+SSI 26 2x64d |2.98	    |**2.90**  |
 SSI 26 2x96d |2.86	    |Training  |
 SSI 26 2x112d|2.82	    |Training  |

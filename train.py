@@ -100,7 +100,7 @@ def test(epoch=0, save_stat=True):
     logger.info(test_str)
     if save_stat:
         torch.save(model.state_dict(),
-                   '{}/{}_2x{}_epoch_{}_{:.5}.pkl'.format('param', opt.depth, opt.width, epoch, acc))
+                   '../{}/{}_2x{}_epoch_{}_{:.5}.pkl'.format('param', opt.depth, opt.width, epoch, acc * 100))
 
 
 epochs = opt.epochs
@@ -110,7 +110,6 @@ mixup = opt.mixup
 
 num_iterations = len(train_data) * epochs
 lr_warmup_iters = len(train_data) * 5
-
 
 lr_scheduler = IterLRScheduler(mode='cosine', baselr=base_lr, niters=num_iterations, warmup_iters=lr_warmup_iters)
 
@@ -133,11 +132,11 @@ def train():
             trans, targets_a, targets_b, lam = mixup_data(trans.cuda(), labels.cuda(), alpha=alpha)
             trans, targets_a, targets_b = map(Variable, (trans, targets_a, targets_b))
 
+            optimizer.zero_grad()
             outputs = model(trans)
             loss = mixup_criterion(Loss, outputs, targets_a, targets_b, lam)
             loss.backward()
             optimizer.step()
-            optimizer.zero_grad()
 
             metric_loss.update(loss)
             iterations += 1

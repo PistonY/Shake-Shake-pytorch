@@ -12,10 +12,10 @@ lettle more.
 
 ### Results on CIFAR-10 
 
-Model        | Proposed | This repo|
--------      |:--------:|:--------:|
-epochs       |1800      |220       |
-SSI 26 2x32d |**3.55**  |3.91      |
-SSI 26 2x64d |2.98	    |**2.90**  |
-SSI 26 2x96d |2.86	    |Training  |
-SSI 26 2x112d|2.82	    |Training  |
+Model        | Proposed | This repo|Model size| Improved |
+-------      |:--------:|:--------:|:--------:|:--------:|
+epochs       |1800      |220       |-         |-         |
+SSI 26 2x32d |**3.55**  |3.91      |11.8M     |-0.37%    |
+SSI 26 2x64d |2.98	    |**2.90**  |46.7M     |0.08%     |
+SSI 26 2x96d |2.86	    |**2.66**  |104.9M    |0.20%     |
+SSI 26 2x112d|2.82	    |**2.56**  |142.7M    |0.26%     |
